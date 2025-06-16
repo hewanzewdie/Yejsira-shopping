@@ -1,7 +1,7 @@
-# Use PHP 8.2 with Apache web server
+# Stage 1: Base image with PHP and Apache
 FROM php:8.2-apache
 
-# Install system packages Laravel needs
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libzip-dev \
     unzip \
@@ -16,23 +16,26 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql zip mbstring
 
-# Enable Apache rewrite module (Laravel needs this for routing)
+# Enable Apache rewrite module (needed by Laravel routes)
 RUN a2enmod rewrite
 
-# Set working directory inside the container
+# Set the working directory
 WORKDIR /var/www/html
 
-# Copy the whole Laravel project to the container
-COPY . /var/www/html
+# Copy the Laravel project files
+COPY . .
 
-# Set proper permissions for storage and cache folders
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Ensure storage and cache folders are writable
+RUN chown -R www-data:www-data storage bootstrap/cache
 
-# Install Composer (Laravel dependency manager)
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Install Composer manually
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
-# Run Composer install
+# Copy .env.example to .env (for build-time artisan commands)
+RUN cp .env.example .env
+
+# Install Laravel dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# ✅ Run these during the Docker build
+# Generate app key and run database migrations
 RUN php artisan key:generate && php artisan migrate --force
