@@ -33,3 +33,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Run Composer install
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# ✅ Run these during the Docker build
+RUN php artisan key:generate && php artisan migrate --force
